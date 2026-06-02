@@ -1,0 +1,4 @@
+# Core builds need fetchcontent for the test-only dependencies in this environment.
+-DGR_USE_FETCHCONTENT_DEPS=ON
+-DUSE_CCACHE=OFF
+-DGR_BUILD_PARALLEL_LEVEL=4

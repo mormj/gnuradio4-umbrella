@@ -1,0 +1,55 @@
+name: integration
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out umbrella repo
+        uses: actions/checkout@v4
+
+      - name: Check out gnuradio4-core
+        uses: actions/checkout@v4
+        with:
+          repository: gnuradio/gnuradio4-core
+          ref: main
+          path: src/gnuradio4-core
+
+      - name: Check out gnuradio4-algorithm
+        uses: actions/checkout@v4
+        with:
+          repository: gnuradio/gnuradio4-algorithm
+          ref: main
+          path: src/gnuradio4-algorithm
+
+      - name: Check out gnuradio4-blocks
+        uses: actions/checkout@v4
+        with:
+          repository: gnuradio/gnuradio4-blocks
+          ref: main
+          path: src/gnuradio4-blocks
+
+      - name: Bootstrap workspace
+        shell: bash
+        run: ./scripts/bootstrap.sh
+
+      - name: Configure environment
+        shell: bash
+        run: source ./scripts/dev-env.sh && env | grep '^GR4_'
+
+      - name: Build stack
+        shell: bash
+        run: source ./scripts/dev-env.sh && ./scripts/build-all.sh
+
+      - name: Test stack
+        shell: bash
+        run: source ./scripts/dev-env.sh && ./scripts/test-all.sh
+
+      - name: Smoke test
+        shell: bash
+        run: source ./scripts/dev-env.sh && ./scripts/integration-smoke.sh
+
