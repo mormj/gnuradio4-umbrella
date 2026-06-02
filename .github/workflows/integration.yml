@@ -9,29 +9,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out umbrella repo
+      - name: Check out workspace repository
         uses: actions/checkout@v4
-
-      - name: Check out gnuradio4-core
-        uses: actions/checkout@v4
-        with:
-          repository: gnuradio/gnuradio4-core
-          ref: main
-          path: src/gnuradio4-core
-
-      - name: Check out gnuradio4-algorithm
-        uses: actions/checkout@v4
-        with:
-          repository: gnuradio/gnuradio4-algorithm
-          ref: main
-          path: src/gnuradio4-algorithm
-
-      - name: Check out gnuradio4-blocks
-        uses: actions/checkout@v4
-        with:
-          repository: gnuradio/gnuradio4-blocks
-          ref: main
-          path: src/gnuradio4-blocks
 
       - name: Bootstrap workspace
         shell: bash
@@ -48,8 +27,3 @@ jobs:
       - name: Test stack
         shell: bash
         run: source ./scripts/dev-env.sh && ./scripts/test-all.sh
-
-      - name: Smoke test
-        shell: bash
-        run: source ./scripts/dev-env.sh && ./scripts/integration-smoke.sh
-

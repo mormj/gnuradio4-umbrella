@@ -4,24 +4,72 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${script_dir}/lib.sh"
 
-component="${1:-}"
+profile="${GR4_BUILD_PROFILE:-dev}"
+component=""
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/build.sh [OPTIONS] <component-name>
+
+Options:
+  --profile PROFILE   Use the named build profile (dev or release)
+  --help              Show help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --profile)
+      shift
+      profile="${1:-}"
+      [[ -n "$profile" ]] || {
+        printf 'error: --profile requires a value\n' >&2
+        usage >&2
+        exit 2
+      }
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    --*)
+      printf 'error: unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ -z "$component" ]]; then
+        component="$1"
+      else
+        printf 'error: unexpected extra argument: %s\n' "$1" >&2
+        usage >&2
+        exit 2
+      fi
+      ;;
+  esac
+  shift
+done
+
 if [[ -z "$component" ]]; then
-  printf 'usage: %s <gnuradio4-core|gnuradio4-algorithm|gnuradio4-blocks>\n' "$0" >&2
+  usage >&2
+  printf 'known components:\n' >&2
+  gr4_repo_names "$(gr4_repo_root)" >&2
   exit 2
 fi
 
-case "$component" in
-  gnuradio4-core|gnuradio4-algorithm|gnuradio4-blocks) ;;
-  *)
-    printf 'unknown component: %s\n' "$component" >&2
-    exit 2
-    ;;
-esac
-
 root="$(gr4_repo_root)"
+gr4_build_profile_validate "$root" "$profile"
+if ! gr4_known_repo "$root" "$component"; then
+  printf 'unknown component: %s\n' "$component" >&2
+  printf 'known components:\n' >&2
+  gr4_repo_names "$root" >&2
+  exit 2
+fi
+
 src_dir="$(gr4_component_src "$root" "$component")"
-build_dir="$(gr4_component_build "$root" "$component")"
-install_prefix="$(gr4_component_install "$root")"
+build_dir="$(gr4_component_build "$root" "$profile" "$component")"
+install_prefix="$(gr4_component_install "$root" "$profile")"
 
 if [[ ! -d "$src_dir" ]]; then
   printf 'source directory is missing: %s\nRun ./scripts/bootstrap.sh first.\n' "$src_dir" >&2
@@ -30,27 +78,28 @@ fi
 
 mkdir -p "$build_dir"
 
-mapfile -t common_args < <(gr4_read_args_file "$root/config/common.cmake.args")
-mapfile -t component_args < <(gr4_read_args_file "$root/config/${component}.cmake.args")
-mapfile -t fetchcontent_args < <(gr4_fetchcontent_args_for_component "$component")
+mapfile -t cmake_args < <(gr4_build_profile_cmake_args "$root" "$profile" "$component")
 
 generator_args=()
 if [[ ! -f "$build_dir/CMakeCache.txt" ]]; then
-  if generator="$(gr4_choose_generator)"; [[ -n "${generator:-}" ]]; then
+  generator="$(gr4_build_profile_generator "$root" "$profile")"
+  if [[ -z "${generator:-}" ]]; then
+    generator="$(gr4_choose_generator)"
+  fi
+  if [[ -n "${generator:-}" ]]; then
     generator_args+=(-G "$generator")
   fi
 fi
 
+printf '[build] profile: %s\n' "$profile"
 printf '[build] configuring %s\n' "$component"
 CMAKE_PREFIX_PATH="$install_prefix" cmake -S "$src_dir" -B "$build_dir" \
   "${generator_args[@]}" \
-  "${common_args[@]}" \
-  "${component_args[@]}" \
-  "${fetchcontent_args[@]}" \
+  "${cmake_args[@]}" \
   -DCMAKE_INSTALL_PREFIX="$install_prefix"
 
 printf '[build] building %s\n' "$component"
-cmake --build "$build_dir" --parallel "${GR4_BUILD_JOBS:-4}"
+cmake --build "$build_dir" --parallel "${GR4_BUILD_JOBS:-6}"
 
 printf '[build] installing %s\n' "$component"
 cmake --install "$build_dir"

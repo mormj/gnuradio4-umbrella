@@ -1,0 +1,7 @@
+# Copy to repos.local.yaml for personal out-of-tree repos.
+# repos.local.yaml is gitignored and is loaded after repos.yaml.
+repos:
+  - name: gr4-my-module
+    url: git@github.com:me/gr4-my-module.git
+    dest: src/gr4-my-module
+    ref: main

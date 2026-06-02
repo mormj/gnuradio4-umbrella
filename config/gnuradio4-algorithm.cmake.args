@@ -1,3 +1,0 @@
-# Algorithm builds against the installed core SDK.
--DGR_USE_FETCHCONTENT_DEPS=ON
-

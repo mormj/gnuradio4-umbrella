@@ -1,0 +1,11 @@
+# Copy to build-profiles.local.yaml for machine-local build policy overrides.
+# The local file is gitignored and loaded after build-profiles.yaml.
+profiles:
+  dev:
+    cmake:
+      cache:
+        CMAKE_CXX_COMPILER: clang++-20
+    components:
+      gnuradio4-core:
+        cache:
+          USE_CCACHE: ON

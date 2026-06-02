@@ -1,7 +1,10 @@
 src/
 build/
 install/
+var/
 .cache/
+.env
+repos.local.yaml
+build-profiles.local.yaml
 *.log
 .DS_Store
-

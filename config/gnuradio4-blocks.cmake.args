@@ -1,3 +1,0 @@
-# Blocks builds against the installed core and algorithm SDKs.
--DGR_USE_FETCHCONTENT_DEPS=ON
-

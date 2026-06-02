@@ -1,3 +1,0 @@
-# Common workspace defaults
--DCMAKE_BUILD_TYPE=RelWithDebInfo
-
