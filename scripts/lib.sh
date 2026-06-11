@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# shellcheck shell=bash
+#
+# Keep this file free of shell-option side effects. It is sourced by
+# scripts/dev-env.sh, which is itself sourced into interactive shells.
 
 gr4_repo_root() {
   local script_dir
@@ -125,11 +128,14 @@ gr4_repo_names() {
 gr4_known_repo() {
   local root="$1"
   local requested="$2"
-  local component
-  while IFS= read -r component; do
-    [[ "$component" == "$requested" ]] && return 0
-  done < <(gr4_repo_names "$root")
-  return 1
+  local name url dest ref found=1
+  while IFS='|' read -r name url dest ref; do
+    [[ -n "$name" ]] || continue
+    if [[ "$name" == "$requested" ]]; then
+      found=0
+    fi
+  done < <(gr4_repos "$root")
+  return "$found"
 }
 
 gr4_build_profiles_file() {
@@ -347,7 +353,13 @@ gr4_choose_generator() {
 gr4_component_src() {
   local root="$1"
   local component="$2"
-  printf '%s/src/%s' "$root" "$component"
+  local name url dest ref
+  while IFS='|' read -r name url dest ref; do
+    [[ "$name" == "$component" ]] || continue
+    printf '%s/%s' "$root" "$dest"
+    return 0
+  done < <(gr4_repos "$root")
+  return 1
 }
 
 gr4_profile_build_root() {

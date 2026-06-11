@@ -76,6 +76,50 @@ if [[ ! -d "$src_dir" ]]; then
   exit 1
 fi
 
+if [[ ! -f "$src_dir/CMakeLists.txt" && -f "$src_dir/package.json" ]]; then
+  printf '[build] profile: %s\n' "$profile"
+  printf '[build] npm project: %s\n' "$component"
+  if [[ ! -d "$src_dir/node_modules" ]]; then
+    printf '[build] installing npm dependencies for %s\n' "$component"
+    (cd "$src_dir" && npm ci)
+  fi
+  printf '[build] building %s\n' "$component"
+  (cd "$src_dir" && GR4_PREFIX_PATH="$install_prefix" GR4_PREFIX="$install_prefix" npm run build)
+  if [[ -f "$src_dir/blocks/CMakeLists.txt" ]]; then
+    blocks_build_dir="${build_dir}/blocks"
+    mkdir -p "$blocks_build_dir"
+    mapfile -t cmake_args < <(gr4_build_profile_cmake_args "$root" "$profile" "$component")
+    generator_args=()
+    if [[ ! -f "$blocks_build_dir/CMakeCache.txt" ]]; then
+      generator="$(gr4_build_profile_generator "$root" "$profile")"
+      if [[ -z "${generator:-}" ]]; then
+        generator="$(gr4_choose_generator)"
+      fi
+      if [[ -n "${generator:-}" ]]; then
+        generator_args+=(-G "$generator")
+      fi
+    fi
+    printf '[build] configuring %s blocks\n' "$component"
+    PATH="$install_prefix/bin:${PATH:-}" \
+      CMAKE_PREFIX_PATH="$install_prefix" \
+      PKG_CONFIG_PATH="$install_prefix/lib/pkgconfig:$install_prefix/lib64/pkgconfig:$install_prefix/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" \
+      cmake -S "$src_dir/blocks" -B "$blocks_build_dir" \
+        "${generator_args[@]}" \
+        "${cmake_args[@]}" \
+        -DCMAKE_INSTALL_PREFIX="$install_prefix"
+    printf '[build] building %s blocks\n' "$component"
+    cmake --build "$blocks_build_dir" --parallel "${GR4_BUILD_JOBS:-6}"
+    printf '[build] installing %s blocks\n' "$component"
+    cmake --install "$blocks_build_dir"
+  fi
+  exit 0
+fi
+
+if [[ ! -f "$src_dir/CMakeLists.txt" ]]; then
+  printf 'unsupported build layout for %s: expected CMakeLists.txt or package.json in %s\n' "$component" "$src_dir" >&2
+  exit 1
+fi
+
 mkdir -p "$build_dir"
 
 mapfile -t cmake_args < <(gr4_build_profile_cmake_args "$root" "$profile" "$component")

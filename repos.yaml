@@ -15,3 +15,18 @@ repos:
     url: https://github.com/mormj/gnuradio4-blocks.git
     dest: src/gnuradio4-blocks
     ref: split_repos
+
+  - name: gr4-incubator
+    url: https://github.com/gnuradio/gr4-incubator.git
+    dest: src/gr4-incubator
+    ref: main
+
+  - name: gnuradio4-control-plane
+    url: https://github.com/gnuradio/gnuradio4-control-plane.git
+    dest: src/gnuradio4-control-plane
+    ref: main
+
+  - name: gnuradio4-studio
+    url: https://github.com/gnuradio/gnuradio4-studio.git
+    dest: src/gnuradio4-studio
+    ref: main

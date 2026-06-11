@@ -4,23 +4,33 @@ profiles:
       generator: Ninja
       cache:
         CMAKE_BUILD_TYPE: RelWithDebInfo
+        USE_CCACHE: ON
     components:
       gnuradio4-core:
         cache:
           GR_USE_FETCHCONTENT_DEPS: ON
-          USE_CCACHE: OFF
       gnuradio4-algorithm:
         cache:
           GR_USE_FETCHCONTENT_DEPS: ON
       gnuradio4-blocks:
         cache:
           GR_USE_FETCHCONTENT_DEPS: ON
+      gr4-incubator:
+        cache:
+          GR_USE_FETCHCONTENT_DEPS: ON
+          ENABLE_PLUGINS: ON
+      gnuradio4-control-plane:
+        cache:
+          GR_USE_FETCHCONTENT_DEPS: ON
+      gnuradio4-studio:
+        cache: {}
 
   release:
     cmake:
       generator: Ninja
       cache:
         CMAKE_BUILD_TYPE: Release
+        USE_CCACHE: ON
     components:
       gnuradio4-core:
         cache:
