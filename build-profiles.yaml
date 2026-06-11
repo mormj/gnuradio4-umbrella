@@ -5,6 +5,10 @@ profiles:
       cache:
         CMAKE_BUILD_TYPE: RelWithDebInfo
         USE_CCACHE: ON
+    runtime:
+      plugin_directories:
+        - lib
+        - lib/gnuradio-4/plugins
     components:
       gnuradio4-core:
         cache:
@@ -23,6 +27,7 @@ profiles:
         cache:
           GR_USE_FETCHCONTENT_DEPS: ON
       gnuradio4-studio:
+        cmake_source: blocks
         cache: {}
 
   release:
@@ -31,6 +36,10 @@ profiles:
       cache:
         CMAKE_BUILD_TYPE: Release
         USE_CCACHE: ON
+    runtime:
+      plugin_directories:
+        - lib
+        - lib/gnuradio-4/plugins
     components:
       gnuradio4-core:
         cache:

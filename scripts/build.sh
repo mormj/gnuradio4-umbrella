@@ -70,6 +70,7 @@ fi
 src_dir="$(gr4_component_src "$root" "$component")"
 build_dir="$(gr4_component_build "$root" "$profile" "$component")"
 install_prefix="$(gr4_component_install "$root" "$profile")"
+cmake_source="$(gr4_build_profile_component_cmake_source "$root" "$profile" "$component")"
 
 if [[ ! -d "$src_dir" ]]; then
   printf 'source directory is missing: %s\nRun ./scripts/bootstrap.sh first.\n' "$src_dir" >&2
@@ -85,12 +86,17 @@ if [[ ! -f "$src_dir/CMakeLists.txt" && -f "$src_dir/package.json" ]]; then
   fi
   printf '[build] building %s\n' "$component"
   (cd "$src_dir" && GR4_PREFIX_PATH="$install_prefix" GR4_PREFIX="$install_prefix" npm run build)
-  if [[ -f "$src_dir/blocks/CMakeLists.txt" ]]; then
-    blocks_build_dir="${build_dir}/blocks"
-    mkdir -p "$blocks_build_dir"
+  if [[ -n "$cmake_source" ]]; then
+    cmake_src_dir="$src_dir/$cmake_source"
+    cmake_build_dir="$build_dir/$cmake_source"
+    if [[ ! -f "$cmake_src_dir/CMakeLists.txt" ]]; then
+      printf 'configured CMake source for %s is missing CMakeLists.txt: %s\n' "$component" "$cmake_src_dir" >&2
+      exit 1
+    fi
+    mkdir -p "$cmake_build_dir"
     mapfile -t cmake_args < <(gr4_build_profile_cmake_args "$root" "$profile" "$component")
     generator_args=()
-    if [[ ! -f "$blocks_build_dir/CMakeCache.txt" ]]; then
+    if [[ ! -f "$cmake_build_dir/CMakeCache.txt" ]]; then
       generator="$(gr4_build_profile_generator "$root" "$profile")"
       if [[ -z "${generator:-}" ]]; then
         generator="$(gr4_choose_generator)"
@@ -99,20 +105,25 @@ if [[ ! -f "$src_dir/CMakeLists.txt" && -f "$src_dir/package.json" ]]; then
         generator_args+=(-G "$generator")
       fi
     fi
-    printf '[build] configuring %s blocks\n' "$component"
+    printf '[build] configuring %s (%s)\n' "$component" "$cmake_source"
     PATH="$install_prefix/bin:${PATH:-}" \
       CMAKE_PREFIX_PATH="$install_prefix" \
       PKG_CONFIG_PATH="$install_prefix/lib/pkgconfig:$install_prefix/lib64/pkgconfig:$install_prefix/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" \
-      cmake -S "$src_dir/blocks" -B "$blocks_build_dir" \
+      cmake -S "$cmake_src_dir" -B "$cmake_build_dir" \
         "${generator_args[@]}" \
         "${cmake_args[@]}" \
         -DCMAKE_INSTALL_PREFIX="$install_prefix"
-    printf '[build] building %s blocks\n' "$component"
-    cmake --build "$blocks_build_dir" --parallel "${GR4_BUILD_JOBS:-6}"
-    printf '[build] installing %s blocks\n' "$component"
-    cmake --install "$blocks_build_dir"
+    printf '[build] building %s (%s)\n' "$component" "$cmake_source"
+    cmake --build "$cmake_build_dir" --parallel "${GR4_BUILD_JOBS:-6}"
+    printf '[build] installing %s (%s)\n' "$component" "$cmake_source"
+    cmake --install "$cmake_build_dir"
   fi
   exit 0
+fi
+
+if [[ -n "$cmake_source" ]]; then
+  src_dir="$src_dir/$cmake_source"
+  build_dir="$build_dir/$cmake_source"
 fi
 
 if [[ ! -f "$src_dir/CMakeLists.txt" ]]; then

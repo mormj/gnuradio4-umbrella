@@ -244,6 +244,7 @@ gr4_parse_build_profile() {
       section = "";
       component = "";
       in_cache = 0;
+      in_plugin_directories = 0;
       next;
     }
     !in_profile {
@@ -253,16 +254,37 @@ gr4_parse_build_profile() {
       section = "cmake";
       component = "";
       in_cache = 0;
+      in_plugin_directories = 0;
+      next;
+    }
+    indent == 4 && line == "runtime:" {
+      section = "runtime";
+      component = "";
+      in_cache = 0;
+      in_plugin_directories = 0;
       next;
     }
     indent == 4 && line == "components:" {
       section = "components";
       component = "";
       in_cache = 0;
+      in_plugin_directories = 0;
       next;
     }
     section == "cmake" && indent == 6 && line == "cache:" {
       in_cache = 1;
+      in_plugin_directories = 0;
+      next;
+    }
+    section == "runtime" && indent == 6 && line == "plugin_directories:" {
+      in_cache = 0;
+      in_plugin_directories = 1;
+      next;
+    }
+    section == "runtime" && indent == 8 && in_plugin_directories && line ~ /^-[[:space:]]*/ {
+      value = line;
+      sub(/^-[[:space:]]*/, "", value);
+      print "plugin_directory|" trim(value);
       next;
     }
     section == "cmake" && indent == 6 && line ~ /^generator:[[:space:]]*/ {
@@ -283,10 +305,18 @@ gr4_parse_build_profile() {
       component = line;
       sub(/:.*/, "", component);
       in_cache = 0;
+      in_plugin_directories = 0;
+      next;
+    }
+    section == "components" && indent == 8 && line ~ /^cmake_source:[[:space:]]*/ {
+      value = line;
+      sub(/^[^:]+:[[:space:]]*/, "", value);
+      print "component_source|" component "|" trim(value);
       next;
     }
     section == "components" && indent == 8 && line == "cache:" {
       in_cache = 1;
+      in_plugin_directories = 0;
       next;
     }
     section == "components" && indent == 10 && in_cache && line ~ /^[^:]+:[[:space:]]*/ {
@@ -342,6 +372,33 @@ gr4_build_profile_generator() {
   done < <(gr4_build_profile_entries "$root" "$profile")
 
   printf '%s\n' "$last"
+}
+
+gr4_build_profile_component_cmake_source() {
+  local root="$1"
+  local profile="$2"
+  local component="$3"
+  local kind name value last=""
+
+  while IFS='|' read -r kind name value _; do
+    if [[ "$kind" == "component_source" && "$name" == "$component" ]]; then
+      last="$value"
+    fi
+  done < <(gr4_build_profile_entries "$root" "$profile")
+
+  printf '%s\n' "$last"
+}
+
+gr4_build_profile_plugin_directories() {
+  local root="$1"
+  local profile="$2"
+  local kind value
+
+  while IFS='|' read -r kind value _; do
+    if [[ "$kind" == "plugin_directory" && -n "$value" ]]; then
+      printf '%s\n' "$value"
+    fi
+  done < <(gr4_build_profile_entries "$root" "$profile")
 }
 
 gr4_choose_generator() {

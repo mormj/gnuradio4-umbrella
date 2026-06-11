@@ -131,8 +131,15 @@ prepend_colon_path LD_LIBRARY_PATH "${GR4_PREFIX_PATH}/lib"
 prepend_colon_path DYLD_LIBRARY_PATH "${GR4_PREFIX_PATH}/lib64"
 prepend_colon_path DYLD_LIBRARY_PATH "${GR4_PREFIX_PATH}/lib"
 prepend_colon_path PYTHONPATH "${GR4_PREFIX_PATH}/lib/python3/site-packages"
-prepend_colon_path GNURADIO4_PLUGIN_DIRECTORIES "${GR4_PREFIX_PATH}/lib"
-prepend_colon_path GNURADIO4_PLUGIN_DIRECTORIES "${GR4_PREFIX_PATH}/lib/gnuradio-4/plugins"
+mapfile -t gr4_plugin_dirs < <(gr4_build_profile_plugin_directories "$root" "$GR4_BUILD_PROFILE")
+if [[ "${#gr4_plugin_dirs[@]}" -eq 0 ]]; then
+  gr4_plugin_dirs=(lib lib/gnuradio-4/plugins)
+fi
+for gr4_plugin_dir in "${gr4_plugin_dirs[@]}"; do
+  [[ -n "$gr4_plugin_dir" ]] || continue
+  prepend_colon_path GNURADIO4_PLUGIN_DIRECTORIES "${GR4_PREFIX_PATH}/${gr4_plugin_dir}"
+done
+unset gr4_plugin_dir gr4_plugin_dirs
 
 set +a
 
